@@ -1,6 +1,8 @@
 
 package com.valleydrop.signal1;
 
+import android.text.SpannableString;
+import android.text.style.UnderlineSpan;
 import android.app.Activity;
 import android.content.Context;
 import android.location.LocationManager;
@@ -16,6 +18,7 @@ import android.telephony.SignalStrength;
 import android.telephony.PhoneStateListener;
 import android.telephony.SignalStrength;
 
+import android.text.style.UnderlineSpan;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
@@ -42,7 +45,7 @@ public class MainActivity extends Activity
         //mHandler= new Handler();
         mContext=this;
         telephonyManagerToListen = (TelephonyManager)this.getSystemService
-                (this.TELEPHONY_SERVICE);
+            (this.TELEPHONY_SERVICE);
         telephonyManagerToListen.listen(mPhoneStateListener, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
     }
 
@@ -50,25 +53,56 @@ public class MainActivity extends Activity
     private PhoneStateListener mPhoneStateListener = new PhoneStateListener()
     {
         @Override
-        public void onSignalStrengthsChanged(SignalStrength signalStrength) {
+        public void onSignalStrengthsChanged(SignalStrength signalStrength)
+        {
             super.onSignalStrengthsChanged(signalStrength);
             TextView comparisonText = (TextView) findViewById(R.id.textViewComparison);
-            comparisonText.setText("Listener to SignalStrength Method: \n" + signalStrength.toString());
+            Object ssFieldValueRsrp = null;
+            Object ssFieldValueRsrq = null;
+            try
+            {
+                Field privateStringSsFieldRSRQ = SignalStrength.class.getDeclaredField("mLteRsrq");
+                Field privateStringSsFieldRSRP = SignalStrength.class.getDeclaredField("mLteRsrp");
+
+                privateStringSsFieldRSRQ.setAccessible(true);
+                ssFieldValueRsrq = privateStringSsFieldRSRQ.get(signalStrength);
+
+                privateStringSsFieldRSRP.setAccessible(true);
+                ssFieldValueRsrp = privateStringSsFieldRSRP.get(signalStrength);
+            }
+            catch (NoSuchFieldException ex) {}
+            catch (IllegalAccessException x) {}
+            String ssRsrp = Integer.toString((int) ssFieldValueRsrp);
+            String ssRsrq = Integer.toString((int) ssFieldValueRsrq);
+
+            String headerString = "Info from \"SignalStrength\":";
+            SpannableString spannableHeaderString = new SpannableString(headerString);
+            spannableHeaderString.setSpan( new UnderlineSpan(), 0, spannableHeaderString.length(), 0);
+
+            comparisonText.setText(spannableHeaderString);
+            comparisonText.append
+            (
+                "\nRSRP: " + ssRsrp
+                + "\nRSRQ: " + ssRsrq
+            );
 
             TextView theText = (TextView) findViewById(R.id.textView1);
             TelephonyManager tm = (TelephonyManager) mContext.getSystemService(mContext.TELEPHONY_SERVICE);
             LocationManager lm = (LocationManager) mContext.getSystemService(mContext.LOCATION_SERVICE);
             Location loc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
             List<android.telephony.CellInfo> infor = tm.getAllCellInfo();
-            for (android.telephony.CellInfo info : infor) {
-                if (info instanceof CellInfoLte) {
+            for (android.telephony.CellInfo info : infor)
+            {
+                if (info instanceof CellInfoLte)
+                {
                     CellSignalStrengthLte ss = ((CellInfoLte) info).getCellSignalStrength();
                     //theButton.setText( ss.toString());
 
                     Object fieldValueRSRP = null;
                     Object fieldValueRSRQ = null;
 
-                    try {
+                    try
+                    {
                         Field privateStringFieldRSRQ = CellSignalStrengthLte.class.getDeclaredField("mRsrq");
                         Field privateStringFieldRSRP = CellSignalStrengthLte.class.getDeclaredField("mRsrp");
 
@@ -77,19 +111,26 @@ public class MainActivity extends Activity
 
                         privateStringFieldRSRP.setAccessible(true);
                         fieldValueRSRP = privateStringFieldRSRP.get(ss);
-                    } catch (NoSuchFieldException ex) {
-                    } catch (IllegalAccessException x) {
                     }
+                    catch (NoSuchFieldException ex) {}
+                    catch (IllegalAccessException x) {}
                     String rsrp = Integer.toString((int) fieldValueRSRP);
                     String rsrq = Integer.toString((int) fieldValueRSRQ);
 
+                    headerString = "Info from \"CellSignalStrengthLte\":";
+                    spannableHeaderString = new SpannableString(headerString);
+                    spannableHeaderString.setSpan( new UnderlineSpan(), 0, spannableHeaderString.length(), 0);
+
                     theText.setText
-                            (
-                                "CellSignalStrengthLte Method:"
-                                + "\nRSRP: " + rsrp
-                                + "\nRSRQ: " + rsrq
-                                + "\nAltitude: " + loc.getAltitude()
-                            );
+                    (
+                        "\nAltitude: " + loc.getAltitude() + "\n\n"
+                    );
+                    theText.append(spannableHeaderString);
+                    theText.append
+                    (
+                        "\nRSRP: " + rsrp
+                        + "\nRSRQ: " + rsrq
+                    );
                 }
             }
         }
